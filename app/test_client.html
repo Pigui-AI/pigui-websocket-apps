@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebSocket Pub/Sub - Test Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    h1 { font-size: 1.5rem; margin-bottom: 20px; color: #38bdf8; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; width: 100%; max-width: 640px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+    .row { display: flex; gap: 10px; margin-bottom: 12px; }
+    input, select { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.9rem; }
+    button { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: background 0.2s; }
+    .btn-connect { background: #0ea5e9; color: white; }
+    .btn-connect:hover { background: #0284c7; }
+    .btn-disconnect { background: #ef4444; color: white; }
+    .btn-send { background: #22c55e; color: white; }
+    .btn-send:hover { background: #16a34a; }
+    .btn-change { background: #a855f7; color: white; }
+    #log { background: #0f172a; border-radius: 8px; padding: 14px; height: 280px; overflow-y: auto; font-size: 0.82rem; font-family: monospace; border: 1px solid #1e293b; }
+    .log-entry { padding: 4px 0; border-bottom: 1px solid #1e293b20; line-height: 1.5; }
+    .event-subscribed { color: #38bdf8; }
+    .event-message { color: #a3e635; }
+    .event-published { color: #fb923c; }
+    .event-user_joined { color: #facc15; }
+    .event-user_left { color: #f87171; }
+    .event-error { color: #f87171; font-weight: bold; }
+    .status { font-size: 0.8rem; margin-bottom: 12px; }
+    .connected { color: #22c55e; } .disconnected { color: #94a3b8; }
+    label { font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; display: block; }
+  </style>
+</head>
+<body>
+  <h1>🔌 WebSocket Pub/Sub Tester</h1>
+  <div class="card">
+    <p class="status disconnected" id="status">● Desconectado</p>
+
+    <div class="row">
+      <div style="flex:1">
+        <label>URL del servidor</label>
+        <input id="serverUrl" value="ws://localhost:8000/ws/" />
+      </div>
+      <div style="flex:1">
+        <label>Tema inicial</label>
+        <input id="topicInput" value="noticias" />
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn-connect" onclick="connect()">Conectar</button>
+      <button class="btn-disconnect" onclick="disconnect()">Desconectar</button>
+    </div>
+
+    <hr style="border-color:#334155; margin: 12px 0;" />
+
+    <div class="row">
+      <div style="flex:1">
+        <label>Cambiar a tema</label>
+        <input id="newTopic" placeholder="otro-tema" />
+      </div>
+      <button class="btn-change" onclick="changeTopic()" style="margin-top:20px">Cambiar tema</button>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <input id="messageInput" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button class="btn-send" onclick="sendMessage()">Publicar</button>
+    </div>
+
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let ws = null;
+
+    function connect() {
+      const url = document.getElementById('serverUrl').value.trim();
+      const topic = document.getElementById('topicInput').value.trim();
+      if (!url || !topic) return alert('Completa URL y tema.');
+      ws = new WebSocket(url + topic);
+      ws.onopen = () => setStatus(true);
+      ws.onclose = () => setStatus(false);
+      ws.onerror = () => log({ event: 'error', message: 'Error de conexión' });
+      ws.onmessage = (e) => log(JSON.parse(e.data));
+    }
+
+    function disconnect() {
+      ws && ws.close();
+    }
+
+    function sendMessage() {
+      const msg = document.getElementById('messageInput').value.trim();
+      if (!msg || !ws) return;
+      ws.send(JSON.stringify({ action: 'publish', message: msg }));
+      document.getElementById('messageInput').value = '';
+    }
+
+    function changeTopic() {
+      const topic = document.getElementById('newTopic').value.trim();
+      if (!topic || !ws) return;
+      ws.send(JSON.stringify({ action: 'subscribe', topic }));
+      document.getElementById('topicInput').value = topic;
+      document.getElementById('newTopic').value = '';
+    }
+
+    function log(data) {
+      const div = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry event-${data.event || 'error'}`;
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${JSON.stringify(data)}`;
+      div.prepend(entry);
+    }
+
+    function setStatus(connected) {
+      const el = document.getElementById('status');
+      el.textContent = connected ? '● Conectado' : '● Desconectado';
+      el.className = `status ${connected ? 'connected' : 'disconnected'}`;
+    }
+  </script>
+</body>
+</html>
