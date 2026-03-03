@@ -1,8 +1,19 @@
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.manager import ConnectionManager
 import json
+
+app = FastAPI(title="WebSocket Pub/Sub Microservice", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app = FastAPI(title="WebSocket Pub/Sub Microservice", version="1.0.0")
 manager = ConnectionManager()
